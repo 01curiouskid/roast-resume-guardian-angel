@@ -1,10 +1,6 @@
 
 import { useState } from 'react';
-import * as pdfjs from 'pdfjs-dist';
 import { toast } from '@/components/ui/use-toast';
-
-// Set worker path for PDF.js
-pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
 interface ResumeUploaderProps {
   onResumeProcessed: (text: string) => void;
@@ -30,21 +26,10 @@ export function ResumeUploader({ onResumeProcessed }: ResumeUploaderProps) {
     try {
       setIsUploading(true);
       
-      // Convert PDF to text
-      const arrayBuffer = await file.arrayBuffer();
-      const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
+      // Read file as text using FileReader
+      const text = await extractTextFromPDF(file);
       
-      let fullText = '';
-      
-      // Extract text from all pages
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const textContent = await page.getTextContent();
-        const pageText = textContent.items.map((item: any) => item.str).join(' ');
-        fullText += pageText + '\n';
-      }
-      
-      if (fullText.trim().length < 50) {
+      if (text.trim().length < 50) {
         toast({
           title: "Not enough text",
           description: "We couldn't extract enough text from your PDF. Please try another file.",
@@ -54,7 +39,7 @@ export function ResumeUploader({ onResumeProcessed }: ResumeUploaderProps) {
         return;
       }
       
-      onResumeProcessed(fullText);
+      onResumeProcessed(text);
     } catch (error) {
       console.error("Error processing PDF:", error);
       toast({
@@ -64,6 +49,49 @@ export function ResumeUploader({ onResumeProcessed }: ResumeUploaderProps) {
       });
       setIsUploading(false);
     }
+  };
+
+  // Function to extract text from PDF using browser's FileReader API
+  const extractTextFromPDF = async (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      
+      reader.onload = async (event) => {
+        try {
+          // Import PDF.js dynamically to avoid SSR issues
+          const pdfjs = await import('pdfjs-dist');
+          
+          // Set worker path for PDF.js
+          const pdfjsWorker = await import('pdfjs-dist/build/pdf.worker.entry');
+          pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+          
+          // Load PDF document
+          const arrayBuffer = event.target?.result as ArrayBuffer;
+          const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
+          
+          let fullText = '';
+          
+          // Extract text from all pages
+          for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const textContent = await page.getTextContent();
+            const pageText = textContent.items.map((item: any) => item.str).join(' ');
+            fullText += pageText + '\n';
+          }
+          
+          resolve(fullText);
+        } catch (error) {
+          console.error("Error extracting text from PDF:", error);
+          reject(error);
+        }
+      };
+      
+      reader.onerror = (error) => {
+        reject(error);
+      };
+      
+      reader.readAsArrayBuffer(file);
+    });
   };
 
   return (
