@@ -37,7 +37,9 @@ serve(async (req) => {
     Make specific references to the skills, job titles, education, and achievements mentioned in the resume.
     Keep it ${roastLength}, punchy, and entertaining.
     Use 4-6 emojis for emphasis throughout the roast.
-    Don't explain that you're an AI - stay in character as the roaster.`;
+    Don't explain that you're an AI - stay in character as the roaster.
+    IMPORTANT: Do NOT start your response with phrases like "Thanks for the prompt!" or any other introductory text.
+    Jump directly into the roast itself.`;
 
     // Create user prompt with specific elements to target
     const userPrompt = `Here's the resume to roast:
@@ -62,7 +64,7 @@ Create a ${roastLength} roast that specifically references these elements while 
         "X-Title": "RoastMyResume"
       },
       body: JSON.stringify({
-        model: "google/gemma-3-1b-it:free",
+        model: "google/gemma-3-4b-it:free", // Updated to the new model
         messages: [
           {
             role: "system",
@@ -89,8 +91,27 @@ Create a ${roastLength} roast that specifically references these elements while 
       );
     }
 
+    // Process the response to remove any potential introductory text
+    let roastContent = data.choices[0].message.content;
+    
+    // Try to remove common introductory phrases
+    const introPatterns = [
+      /^Thanks for the prompt!.*/i,
+      /^Here's a roast of .*/i,
+      /^I'll create a roast.*/i,
+      /^Here is a .*/i,
+      /^Alright, let's roast.*/i
+    ];
+    
+    for (const pattern of introPatterns) {
+      roastContent = roastContent.replace(pattern, '');
+    }
+    
+    // Trim any leading whitespace or newlines
+    roastContent = roastContent.trim();
+
     return new Response(
-      JSON.stringify({ roast: data.choices[0].message.content }),
+      JSON.stringify({ roast: roastContent }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
     
