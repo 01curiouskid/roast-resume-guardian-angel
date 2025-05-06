@@ -33,11 +33,18 @@ export function RoastDisplay({ roast, onReset }: RoastDisplayProps) {
   const shareUrl = window.location.href;
   const title = "Check out my resume roast! 🔥";
 
+  // Format the roast text to ensure paragraphs are preserved
+  const formattedRoast = roast.split('\n').map((paragraph, index) => (
+    paragraph.trim() ? (
+      <p key={index} className="mb-3 last:mb-0">{paragraph}</p>
+    ) : null
+  )).filter(Boolean);
+
   return (
     <div className="w-full max-w-2xl mx-auto bg-gray-800 rounded-lg p-6 shadow-lg">
       <h2 className="text-2xl font-bold text-white mb-4">Your Resume Roast:</h2>
-      <div className="bg-gray-700 rounded-lg p-4 mb-6">
-        <p className="text-white whitespace-pre-line">{roast}</p>
+      <div className="bg-gray-700 rounded-lg p-4 mb-6 max-h-[60vh] overflow-y-auto">
+        <div className="text-white">{formattedRoast}</div>
       </div>
       
       <div className="flex flex-col sm:flex-row gap-4 justify-between">
