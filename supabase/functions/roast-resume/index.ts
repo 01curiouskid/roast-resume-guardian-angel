@@ -38,8 +38,9 @@ serve(async (req) => {
     Keep it ${roastLength}, punchy, and entertaining.
     Use 4-6 emojis for emphasis throughout the roast.
     Don't explain that you're an AI - stay in character as the roaster.
-    IMPORTANT: Do NOT start your response with phrases like "Thanks for the prompt!" or any other introductory text.
-    Jump directly into the roast itself. Start with something like, "Okay let's get started..."`;
+    CRITICAL: Start your response IMMEDIATELY with "Okay, let's get started" followed by your roast. 
+    Do NOT include any introductory text, acknowledgments, or meta-commentary.
+    Go straight into the roast itself.`;
 
     // Create user prompt with specific elements to target
     const userPrompt = `Here's the resume to roast:
@@ -52,7 +53,8 @@ Key elements to focus your roast on:
 - Education: ${keyElements.education.join(', ')}
 - Achievements/buzzwords: ${keyElements.achievements.join(', ')}
 
-Create a ${roastLength} roast that specifically references these elements while maintaining a ${intensityLevel} tone.`;
+Create a ${roastLength} roast that specifically references these elements while maintaining a ${intensityLevel} tone. 
+Remember: Start immediately with "Okay, let's get started" and go straight into the roast.`;
 
     // Call OpenRouter API with the secret key
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -64,7 +66,7 @@ Create a ${roastLength} roast that specifically references these elements while 
         "X-Title": "RoastMyResume"
       },
       body: JSON.stringify({
-        model: "google/gemma-3-4b-it:free", // Updated to the new model
+        model: "google/gemma-3-4b-it:free",
         messages: [
           {
             role: "system",
@@ -91,24 +93,44 @@ Create a ${roastLength} roast that specifically references these elements while 
       );
     }
 
-    // Process the response to remove any potential introductory text
+    // Process the response to clean up any unwanted text
     let roastContent = data.choices[0].message.content;
     
-    // Try to remove common introductory phrases
-    const introPatterns = [
-      /^Thanks for the prompt!.*/i,
-      /^Here's a roast of .*/i,
-      /^I'll create a roast.*/i,
-      /^Here is a .*/i,
-      /^Alright, let's roast.*/i
+    // Remove any potential leading fragments or incomplete text
+    const fragmentPatterns = [
+      /^[^A-Z]*?(?=Okay)/i,  // Remove everything before "Okay"
+      /^[,\s\-\.\w]*?(?=Okay)/i,  // Remove fragments like ", project-and, that" before "Okay"
+      /^.*?(?=Okay, let's get started)/i,  // Remove everything before the proper start
     ];
     
-    for (const pattern of introPatterns) {
+    for (const pattern of fragmentPatterns) {
       roastContent = roastContent.replace(pattern, '');
     }
     
-    // Trim any leading whitespace or newlines
-    roastContent = roastContent.trim();
+    // If the response doesn't start with "Okay", try to find where the actual roast begins
+    if (!roastContent.toLowerCase().startsWith('okay')) {
+      // Look for the start of a proper sentence with a capital letter
+      const sentenceMatch = roastContent.match(/[A-Z][^.!?]*[.!?]/);
+      if (sentenceMatch) {
+        const sentenceStart = roastContent.indexOf(sentenceMatch[0]);
+        if (sentenceStart > 0) {
+          roastContent = roastContent.substring(sentenceStart);
+        }
+      }
+      
+      // As a last resort, if we still have fragments, prepend "Okay, let's get started. "
+      if (roastContent.length < 50 || /^[^A-Z]*[,\-\s]/.test(roastContent)) {
+        roastContent = "Okay, let's get started. " + roastContent.replace(/^[^A-Z]*/, '');
+      }
+    }
+    
+    // Final cleanup - remove any remaining leading punctuation or whitespace
+    roastContent = roastContent.replace(/^[,\s\-\.]+/, '').trim();
+    
+    // Ensure it starts with a capital letter
+    if (roastContent.length > 0) {
+      roastContent = roastContent.charAt(0).toUpperCase() + roastContent.slice(1);
+    }
 
     return new Response(
       JSON.stringify({ roast: roastContent }),
