@@ -39,7 +39,7 @@ serve(async (req) => {
     Use 4-6 emojis for emphasis throughout the roast.
     Don't explain that you're an AI - stay in character as the roaster.
     IMPORTANT: Do NOT start your response with phrases like "Thanks for the prompt!" or any other introductory text.
-    Jump directly into the roast itself.`;
+    Jump directly into the roast itself. Start with something like, "Okay let's get started..."`;
 
     // Create user prompt with specific elements to target
     const userPrompt = `Here's the resume to roast:
