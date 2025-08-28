@@ -66,7 +66,7 @@ Remember: Start immediately with "Okay, let's get started" and go straight into 
         "X-Title": "RoastMyResume"
       },
       body: JSON.stringify({
-        model: "google/gemma-3-4b-it:free",
+        model: "meta-llama/llama-3.2-3b-instruct:free",
         messages: [
           {
             role: "system",
